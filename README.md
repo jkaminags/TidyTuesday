@@ -6,5 +6,5 @@ Past TidyTuesday datasets I've worked with:
 
 | Dataset | Data Date | Source | Result! |
 |----|----|----|----|
-| Cheese | 2024-06-04 | [Cheese dataset](https://github.com/rfordatascience/tidytuesday/blob/main/data/2024/2024-06-04/readme.md) |  |
+| Cheese | 2024-06-04 | [Cheese dataset](https://github.com/rfordatascience/tidytuesday/blob/main/data/2024/2024-06-04/readme.md) | [QMD file](https://github.com/jkaminags/TidyTuesday/blob/main/2024/cheese.qmd) |
 |  |  |  |  |
