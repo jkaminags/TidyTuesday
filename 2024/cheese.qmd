@@ -1,0 +1,97 @@
+---
+title: "TidyTuesday 2024-06-04: Cheese"
+format: html
+date: "2025-07-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## TidyTuesday 2024-06-04 - Cheese Dataset
+
+The cheese dataset records information about the cheese produced in countries across the world, including what they're made from, their nutritional information, and their flavor/aroma details. In this TidyTuesday, we explore the most common animal milk used to produce cheese in European countries.
+
+```{r data-load}
+#| message: FALSE
+#| warning: FALSE
+library(tidyverse)
+library(sf)
+library(rworldmap)
+library(rnaturalearth)
+
+tuesdata <- tidytuesdayR::tt_load('2024-06-04')
+df_cheese <- tuesdata$cheeses
+```
+
+
+```{r data-manipulation}
+# Only including continental Europe + the UK and Cyprus
+# Excluding Iceland due to map constraints
+european_countries <- c("Switzerland", "France", "England", "Great Britain",
+                        "United Kingdom", "Czechia", "Italy", "Cyprus",
+                        "Spain", "Netherlands", "Scotland", "Germany",
+                        "Portugal", "Austria", "Greece", "Ireland",
+                        "Hungary", "Belgium", "Denmark", "Wales", "Poland",
+                        "Slovakia", "Romania", "Croatia", "Lithuania", "Serbia",
+                        "Albania", "Macedonia", "Norway", "Sweden", "Finland",
+                        "Slovenia", "Bosnia and Herz.", "Montenegro",
+                        "Moldova", "Latvia", "Estonia", "Belarus", "Ukraine",
+                        "Czech Republic", "North Macedonia", "Liechenstein",
+                        "Luxembourg", "Bulgaria", "Kosovo")
+
+df_cheese_milks <- df_cheese |> 
+  # Separate out countries and milks with multiple entries in 1 row
+  separate_rows(country, sep = ", ") |>
+  separate_rows(milk, sep = ", ") |>
+  select(country, milk) |>
+  filter(country %in% european_countries & !is.na(milk)) |>
+  # For mapping, names only take United Kingdom and Czechia
+  mutate(country_fmt = case_when(
+    country == "Great Britain" ~ "United Kingdom",
+    country == "England" ~ "United Kingdom",
+    country == "Wales" ~ "United Kingdom",
+    country == "Scotland" ~ "United Kingdom",
+    country == "Holland" ~ "Netherlands",
+    country == "Czech Republic" ~ "Czechia",
+    country == "Macedonia" ~ "North Macedonia",
+    country == "Serbia" ~ "Republic of Serbia",
+    .default = country
+    ),
+    milk_fct = as.factor(milk)
+  ) |>
+  mutate(.by = country_fmt,
+    # Sort factor by country to find most common milk
+    milk_mostcommon = names(sort(summary(milk_fct), decreasing = TRUE))[1]
+  ) |>
+  select(country_fmt, milk_mostcommon) |>
+  distinct()
+```
+
+
+
+```{r map-creation}
+#| warning: FALSE
+# Loading world and European map, scaling to include countries
+world_map <- ne_countries(scale = 50, returnclass = "sf")
+europe_map <- world_map |> filter(name %in% european_countries)
+europe_crop_coords <- st_bbox(c(xmin = -12, xmax = 34, 
+                                ymin = 34, ymax = 70), crs = st_crs(4326))
+europe_map_crop <- europe_map |> st_crop(europe_crop_coords)
+
+europe_cheese_map <- merge(europe_map_crop, df_cheese_milks, 
+              by.x = "sovereignt", by.y = "country_fmt", all = TRUE)
+
+# Creating cheese map
+europe_mostcommon_milks <- europe_cheese_map |> 
+  drop_na(milk_mostcommon) |>
+  ggplot() +
+  geom_sf(aes(fill = milk_mostcommon)) +
+  labs(title = "Most common animal milk for cheese production in Europe") +
+  scale_fill_manual(values = c("#BF6D24FF", "#888238FF", "#BCD7EAFF"),
+                    name = "Most Common Milk",
+                    labels = c("Cow", "Goat", "Sheep")) +
+  theme_minimal()
+
+europe_mostcommon_milks
+```
