@@ -1,0 +1,85 @@
+---
+title: "TidyTuesday - Dungeons and Dragons Monsters"
+author: "Josephine Kaminaga"
+output: html_document
+date: "2025-07-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## TidyTuesday 2025-05-27 - Dungeons and Dragons Monsters (2024)
+
+The popular RPG game Dungeons and Dragons has a massive variety of monsters that players can face, with a similarly massive range of abilities, strengths, weaknesses, and designs. The database used for this TidyTuesday contains information on all monsters from the DND 2024 update. Today, we'll be investigating whether stronger monsters can speak more languages. For brevity's sake, a monster's strength will be defined linearly by their hit points (HP). The more hit points a monster has, the stronger they are.
+
+```{r data-load}
+#| warning: FALSE
+library(tidyverse)
+library(ggrepel)
+library(paletteer)
+
+tuesdata <- tidytuesdayR::tt_load('2025-05-27')
+monsters <- tuesdata$monsters
+```
+
+To get the data to the format we need for the plot, we first need to make a new column representing how many languages a monster speaks.
+
+```{r data-wrangling}
+df_monsters <- monsters |>
+  select(name, hp_number, languages) |>
+  mutate(
+    .by = name,
+    languages_num = case_when(
+      languages == "None" ~ "0",
+      # Estimated that there are 16 base languages in DND 5E
+      str_detect(languages, "All") ~ "16",
+      # Languages and additional abilities are separated with ;
+      # If a monster only understands languages then they can't speak
+      str_detect(str_split(languages, ";")[[1]][1],
+                 "Understands") ~ "0",
+      # 'plus' phrases are on top of the monster's single base lang
+      str_detect(languages, "plus one") ~ "2",
+      str_detect(languages, "plus two") ~ "3",
+      str_detect(languages, "plus three") ~ "4",
+      str_detect(languages, "plus four") ~ "5",
+      str_detect(languages, "plus five") ~ "6",
+      # Languages are separated by commas
+      .default = as.character(length(
+        str_split(
+          str_split(languages, ";")[[1]][1], ","
+        )[[1]]
+        )
+      )
+    )
+  ) |>
+  mutate(
+    # For ordering no. of languages in the plot
+    languages_num = languages_num |>
+      fct_relevel("16", "6", "4", "3", "2", "1", "0")
+  )
+```
+
+A violin plot can display the center and spread of hit points for each number of spoken languages, which is exactly what we want to know.
+
+```{r make-plot}
+#| message: FALSE
+#| warning: FALSE
+
+# Only 1 monster can speak 6 languages
+df_lang_6 <- df_monsters |> filter(languages_num == "6")
+
+gg_monsters <- df_monsters |>
+  ggplot(aes(x = hp_number, y = languages_num, 
+             fill = languages_num, color = languages_num)) +
+  geom_violin(drop = FALSE) +
+  geom_point(data = df_lang_6) +
+  scale_colour_paletteer_d("MetBrewer::Hokusai1") +
+  scale_fill_paletteer_d("MetBrewer::Hokusai1") +
+  labs(x = "Hit Points", y = "Languages spoken",
+       title = "Do stronger monsters speak more languages?") +
+  theme_hc() + 
+  theme(legend.position = "none") 
+
+gg_monsters
+```
