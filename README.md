@@ -8,3 +8,4 @@ Past TidyTuesday datasets I've worked with:
 |------------------|------------------|------------------|------------------|
 | Cheese | 2024-06-04 | [Cheese dataset](https://github.com/rfordatascience/tidytuesday/blob/main/data/2024/2024-06-04/readme.md) | [QMD file](https://github.com/jkaminags/TidyTuesday/blob/main/2024/cheese.qmd) |
 | DND Monsters | 2025-05-27 | [DND Dataset](https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-05-27/readme.md) | [RMD file](https://github.com/jkaminags/TidyTuesday/blob/main/2025/dnd.Rmd) |
+| Income Inequality | 2025-08-05 | [Income dataset](https://github.com/rfordatascience/tidytuesday/tree/main/data/2025/2025-08-05) | [R scripts](https://github.com/jkaminags/TidyTuesday/tree/main/2025/giniVisualizer) |
