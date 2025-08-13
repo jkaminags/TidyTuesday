@@ -1,0 +1,116 @@
+---
+title: "TidyTuesday - Extreme Weather Attribution"
+author: "Josephine Kaminaga"
+output: html_document
+---
+
+In this TidyTuesday, we analyze data on extreme weather events across the world. Each event can be categorized as having increased probability because of climate change, having lessened probability, no change, or not enough information. We will visualize how the burden of climate change-related extreme weather events has been distributed across continents in the last 10 years.
+
+```{r load-data}
+#| message: FALSE
+library(tidyverse)
+library(paletteer)
+library(waffle)
+library(ggtext)
+
+tuesdata <- tidytuesdayR::tt_load('2025-08-12')
+
+attribution_studies <- tuesdata$attribution_studies
+attribution_studies_raw <- tuesdata$attribution_studies_raw
+```
+
+
+```{r data-setup, warning = FALSE}
+df_attribution <- attribution_studies |>
+  filter(study_focus == "Event" &
+           classification == "More severe or more likely to occur" &
+           !(cb_region %in% c("Global", "Northern hemisphere")) &
+           !(cb_region %in% c("Antarctica", "Arctic"))) |>
+  select(event_name, event_year, iso_country_code, cb_region, event_type) |>
+  mutate(
+    continent = case_when(
+      cb_region == "Northern America" ~ "North America",
+      cb_region == "Sub-Saharan Africa" ~ "Africa",
+      cb_region == "Eastern and south-eastern Asia" ~ "Asia",
+      cb_region == "Northern Africa and western Asia" ~ "Africa",
+      cb_region == "Central and southern Asia" ~ "Asia",
+      cb_region == "Australia and New Zealand" ~ "Oceania",
+      cb_region == "Latin America and the Caribbean" ~ "Latin America & Caribbean",
+      .default = cb_region
+    ) |> fct_relevel("North America", "Latin America & Caribbean",
+                     "Europe", "Africa", "Asia", "Oceania",
+                     "Antarctica & Arctic"),
+    year_start = case_when(
+      event_year == "Mid-1990s" ~ 1990,
+      event_year == "2010s" ~ 2010,
+      str_detect(event_year, "-") ~ str_extract(event_year, "[0-9]+(?=-)") |>
+        as.numeric(),
+      .default = 0
+    ),
+    year_end = case_when(
+      event_year == "2010s" ~ 2010,
+      str_detect(event_year, "-") ~ str_extract(event_year, "(?<=-)[0-9]+") |>
+        as.numeric(),
+      .default = 0
+    )
+  ) |>
+  separate_longer_delim(cols = event_year, delim = ", ") |>
+  rowwise() |>
+  group_map(
+    function(.x, .y) {
+      .x |>
+        expand(nesting(event_name, continent, event_year),
+               year_test = seq(year_start, year_end))
+    }
+  ) |>
+  bind_rows() |>
+  mutate(
+    year = case_when(
+      year_test == 0 ~ as.numeric(event_year),
+      .default = year_test
+    )
+  ) |>
+  filter(year >= 2014 & year <= 2024) |>
+  count(year, continent)
+```
+
+
+```{r make-plot}
+plot_title <- "Climate Change-Driven Extreme Weather Events by Continent"
+plot_subtitle <- "<p><span style='color:#EDAD08;'><b>Asia</b></span>, <span style='color:#0F8554;'><b>Europe</b></span>, and <span style='color:#5F4690;'><b>North America</b></span> have experienced the greatest number</p><p>of climate change-driven extreme weather events in the last 10 years.</p><p><span style='color:#38A6A5;'><b>Latin America & the Caribbean</b></span>, <span style='color:#73AF48;'><b>Africa</b></span>, and <span style='color:#E17C05;'><b>Oceania</b></span> lag behind.</p><p> </p>"
+plot_colors <- c("#5F4690","#38A6A5", "#0F8554", "#73AF48",
+                 "#EDAD08", "#E17C05")
+
+attrib_plot <- df_attribution |>
+  ggplot(aes(fill = continent, values = n)) +
+  geom_waffle(color = "white", size = 0.375, n_rows = 4, flip = TRUE) +
+  facet_wrap(~year, nrow = 1, strip.position = "bottom") +
+  scale_x_discrete() +
+  scale_y_continuous(labels = function(x) x * 4,
+                     expand = c(0, 0)) +
+  scale_fill_discrete(type = plot_colors) +
+  coord_equal() +
+  labs(title = plot_title, 
+       subtitle = plot_subtitle) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    plot.title.position = "plot",
+    plot.title = element_text(size = 25, face = "bold",
+                              margin = margin(0, 0, 12, 0)),
+    plot.subtitle = element_markdown(size = 14,
+                                     margin = margin(0, 0, 10, 0))
+  )
+
+attrib_plot
+```
+
+```{r save}
+ggsave(
+  plot = attrib_plot,
+  filename = "attribution.jpeg",
+  width = 12,
+  height = 5.5
+)
+```
+```
