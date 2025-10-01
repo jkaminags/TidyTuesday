@@ -1,0 +1,12 @@
+name: ginivisualizeR
+title: ginivisualizeR
+username: jkaminaga
+account: jkaminaga
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15161923
+bundleId: 10728165
+url: https://jkaminaga.shinyapps.io/ginivisualizeR/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
