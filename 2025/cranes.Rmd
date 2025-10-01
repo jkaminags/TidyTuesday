@@ -1,0 +1,156 @@
+---
+title: "TidyTuesday - Crane Observations"
+author: "Josephine Kaminaga"
+output: html_document
+date: "2025-09-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## TidyTuesday 2025-09-30 - Crane Observations at Lake Hornborgasjon, Sweden
+
+This TidyTuesday, we're exploring crane population numbers during the spring and fall over a 30 year period (1994-2024). We have data on the date of observation, the number of cranes observed, comments the observers made, and whether a weather disruption happened. Today we will make ridgeline plots to visualize the distribution of crane populations in spring and fall between 2004-2024.
+
+```{r load-data}
+#| warning: FALSE
+#| message: FALSE
+library(tidyverse)
+library(ggridges)
+library(cowplot)
+
+tuesdata <- tidytuesdayR::tt_load("2025-09-30")
+cranes <- tuesdata$cranes
+```
+
+First, we have to get the data into a usable state. We will remove any year that has >15% missing observations and do some light formatting for ease of plotting later.
+
+```{r manipulate-data}
+# Add year
+cranes <- cranes |>
+  mutate(year = year(date),
+         year_fct = as.factor(year))
+
+# Check how many missing and how many total observations each year has
+non_missing_years <- cranes |>
+  summarise(
+    .by = year,
+    n_missing = sum(is.na(observations)),
+    n_total = n(),
+    percent_missing = n_missing / n_total
+  ) |>
+  filter(percent_missing <= 0.15) |>
+  pull(year)
+
+df_cranes <- cranes |>
+  filter(year %in% non_missing_years &
+         year >= 2004) |>
+  drop_na(observations) |>
+  mutate(monthday = format(date, "%m-%d") |>
+           as.Date(format = "%m-%d"))
+
+df_cranes_spring <- df_cranes |>
+  filter(month(monthday) < 6)
+
+df_cranes_fall <- df_cranes |>
+  filter(month(monthday) >= 7)
+```
+
+We use the `ggridges` package to make our ridgeline plots, and `scale_fill_gradient` with custom start and end color values for the gradients to evoke spring and autumn color palettes.
+
+```{r make-plots}
+p1 <- df_cranes_spring |>
+  ggplot(aes(x = monthday, y = year_fct, fill = ..x..,
+             height = observations)) +
+  geom_density_ridges_gradient(rel_min_height = 0.005,
+                      scale = 1.9,
+                      stat = "identity",
+                      linewidth = 0.1) +
+  scale_fill_gradient(low = "#6a9b0d", high = "#f291be") +
+  scale_x_date(date_labels = "%b. %d",
+               breaks = c(
+                 as.Date("2025-03-10"),
+                 as.Date("2025-03-22"),
+                 as.Date("2025-04-03"),
+                 as.Date("2025-04-15"),
+                 as.Date("2025-04-28")
+               ),
+               limits = as.Date(
+                 c("2025-03-10",
+                   "2025-04-28")
+               )
+              ) +
+  labs(x = NULL, y = NULL) +
+  theme_minimal() +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.text.x = element_text(size = 8.5),
+        axis.text.y = element_text(size = 8),
+        axis.ticks.x = element_line(),
+        legend.position = "none")
+
+p2 <- df_cranes_fall |>
+  ggplot(aes(x = monthday, y = year_fct, fill = ..x..,
+             height = observations)) +
+  geom_density_ridges_gradient(rel_min_height = 0.005,
+                      scale = 1.9,
+                      stat = "identity",
+                      linewidth = 0.15) +
+  scale_fill_gradient(low = "#F57524", high = "#9b5329") +
+  scale_x_date(date_labels = "%b. %d",
+               breaks = c(
+                 as.Date("2025-08-20"),
+                 as.Date("2025-09-3"),
+                 as.Date("2025-09-17"),
+                 as.Date("2025-10-01"),
+                 as.Date("2025-10-15")
+               ),
+               limits = as.Date(
+                 c("2025-08-20",
+                   "2025-10-15")
+               )
+              ) +
+  labs(x = NULL, y = NULL) +
+  theme_minimal() +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.text.x = element_text(size = 8.5),
+        axis.text.y = element_text(size = 8),
+        axis.ticks.x = element_line(),
+        legend.position = "none")
+```
+
+Finally, we use the `cowplot` package to combine our plots and our text into one image.
+
+```{r combine-plots}
+plot_combined <- plot_grid(p1, p2, nrow = 1)
+
+title <- ggdraw() +
+  draw_label("20 Years of Cranes",
+             fontface = "bold",
+             size = 19,
+             vjust = 0.7) +
+  theme(panel.background = element_rect(fill = "white",
+                                        color = "white"),
+        plot.background = element_rect(fill = "white",
+                                       color = "white"))
+
+caption <- ggdraw() +
+  draw_label("Between 2004 and 2024, spring crane counts have consistently\n been larger than autumn, with spring peaks occurring earlier each year.",
+             size = 9,
+             vjust = 0.1) +
+  theme(panel.background = element_rect(fill = "white",
+                                        color = "white"),
+        plot.background = element_rect(fill = "white",
+                                       color = "white"))
+
+plot_final <- plot_grid(title, caption, plot_combined,
+          ncol = 1,
+          rel_heights = c(0.15, 0.08, 1.2))
+
+ggsave(filename = "cranes.png",
+       plot = plot_final)
+```
+

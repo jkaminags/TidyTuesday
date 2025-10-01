@@ -19,6 +19,7 @@ library(tidyverse)
 library(sf)
 library(rworldmap)
 library(rnaturalearth)
+library(scatterpie)
 
 tuesdata <- tidytuesdayR::tt_load('2024-06-04')
 df_cheese <- tuesdata$cheeses
@@ -62,12 +63,19 @@ df_cheese_milks <- df_cheese |>
   ) |>
   mutate(.by = country_fmt,
     # Sort factor by country to find most common milk
-    milk_mostcommon = names(sort(summary(milk_fct), decreasing = TRUE))[1]
+    milk_mostcommon = names(sort(summary(milk_fct), decreasing = TRUE))[1],
+    cow_prop = sum(milk_fct == "cow") / length(milk_fct) * 100,
+    sheep_prop = sum(milk_fct == "sheep") / length(milk_fct) * 100,
+    goat_prop = sum(milk_fct == "goat") / length(milk_fct) * 100,
+    buffalo_prop = sum(milk_fct == "buffalo") / length(milk_fct) * 100,
+    waterbuff_prop = sum(milk_fct == "water buffalo") / length(milk_fct) * 100,
+    plant_prop = sum(milk_fct == "plant-based") / length(milk_fct) * 100,
+    moose_prop = sum(milk_fct == "moose") / length(milk_fct) * 100,
+    donkey_prop = sum(milk_fct == "donkey") / length(milk_fct) * 100
   ) |>
-  select(country_fmt, milk_mostcommon) |>
+  select(country_fmt, milk_mostcommon, ends_with("prop")) |>
   distinct()
 ```
-
 
 
 ```{r map-creation}
@@ -80,18 +88,36 @@ europe_crop_coords <- st_bbox(c(xmin = -12, xmax = 34,
 europe_map_crop <- europe_map |> st_crop(europe_crop_coords)
 
 europe_cheese_map <- merge(europe_map_crop, df_cheese_milks, 
-              by.x = "sovereignt", by.y = "country_fmt", all = TRUE)
+              by.x = "sovereignt", by.y = "country_fmt", all = TRUE) |> drop_na(milk_mostcommon)
 
 # Creating cheese map
 europe_mostcommon_milks <- europe_cheese_map |> 
   drop_na(milk_mostcommon) |>
   ggplot() +
   geom_sf(aes(fill = milk_mostcommon)) +
+  geom_scatterpie(
+    aes(x = label_x, y = label_y), data = df_test,
+    cols = c("cow_prop", "sheep_prop", "goat_prop",
+           "buffalo_prop", "waterbuff_prop",
+           "plant_prop", "donkey_prop", "moose_prop")
+    ) +
   labs(title = "Most common animal milk for cheese production in Europe") +
-  scale_fill_manual(values = c("#BF6D24FF", "#888238FF", "#BCD7EAFF"),
-                    name = "Most Common Milk",
-                    labels = c("Cow", "Goat", "Sheep")) +
+  # scale_fill_manual(values = c("#BF6D24FF", "#888238FF", "#BCD7EAFF"),
+  #                   name = "Most Common Milk",
+  #                   labels = c("Cow", "Goat", "Sheep")) +
   theme_minimal()
 
 europe_mostcommon_milks
+
+ggplot() + geom_scatterpie(
+  aes(x = label_x, y = label_y), data = df_test,
+  cols = c("cow_prop", "sheep_prop", "goat_prop",
+           "buffalo_prop", "waterbuff_prop",
+           "plant_prop", "donkey_prop", "moose_prop")
+)
+
+df_test <- europe_cheese_map |>
+  select(sovereignt, label_x, label_y,
+         ends_with("prop")) |>
+  as.data.frame()
 ```
