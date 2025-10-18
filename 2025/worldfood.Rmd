@@ -1,0 +1,208 @@
+---
+title: "TidyTuesday - World Food Day"
+author: "Josephine Kaminaga"
+output: html_document
+date: "2025-10-14"
+---
+
+```{r load, message = FALSE}
+library(tidyverse)
+library(countrycode)
+
+tuesdata <- tidytuesdayR::tt_load("2025-10-14")
+food_security <- tuesdata$food_security
+```
+
+How does the dietary energy supply derived from cereals, roots, and tubers vary with undernourishment over the years, for each continent?
+
+```{r data-manip}
+continents <- c("Africa", "Europe", "Asia",
+                "Oceania", "Northern America",
+                "Central America", "South America")
+
+df_food <- food_security |>
+  filter(Item %in% c("Share of dietary energy supply derived from cereals, roots and tubers (percent) (3-year average)",
+                   "Prevalence of undernourishment (percent) (3-year average)") &
+           Area %in% continents) |>
+  mutate(
+    .by = c(Year_Start, Item),
+    Item = case_when(
+      Item == "Share of dietary energy supply derived from cereals, roots and tubers (percent) (3-year average)" ~ "cereals",
+      Item == "Prevalence of undernourishment (percent) (3-year average)" ~ "undernourishment"
+    ),
+    Area = case_when(Area == "Central America" ~ "South America",
+                     .default = Area),
+    YS_full = ymd(Year_Start, truncated = 2L) + days(1),
+    YE_full = ymd(Year_End, truncated = 2L) + days(1),
+    year_est = mean(c(YS_full, YE_full)) |> year()
+  ) |>
+  mutate(
+    .by = c(year_est, Item),
+    Value = case_when(
+      Area == "South America" ~ mean(Value),
+      .default = Value
+    ),
+    Item = case_when(
+      Item == "cereals" ~ "% of dietary energy from cereals",
+      Item == "undernourishment" ~ "% undernourished population"
+    )
+  ) |>
+  distinct() |>
+  select(Area, year_est, Item, Value) |>
+  filter(year_est < 2021)
+```
+
+
+```{r build-plots, warning = FALSE}
+# Colors from MetBrewer::Juarez color palette
+plt_africa <- df_food |>
+  filter(Area == "Africa") |>
+  ggplot(aes(x = year_est, y = Value, group = Item)) +
+  geom_line(linewidth = 0.8, 
+            alpha = 0.7, col = "#808080") +
+  geom_point(aes(col = Item),
+             size = 2.2) +
+  scale_x_continuous(breaks = c(2006, 2013, 2020)) +
+  scale_y_continuous(limits = c(0, 80)) +
+  labs(x = NULL, y = "%", title = "Africa") +
+  theme_minimal() +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_text(color = "#637B31FF",
+                              face = "bold"
+                              ),
+    legend.title = element_blank()
+  )
+
+plt_europe <- df_food |>
+  filter(Area == "Europe") |>
+  ggplot(aes(x = year_est, y = Value, group = Item)) +
+  geom_line(linewidth = 0.8, 
+            alpha = 0.7, col = "#808080") +
+  geom_point(aes(col = Item),
+             size = 2.2) +
+  scale_x_continuous(breaks = c(2006, 2013, 2020)) +
+  scale_y_continuous(limits = c(0, 80)) +
+  labs(x = NULL, y = NULL, title = "Europe") +
+  theme_minimal() +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_text(color = "#A82203FF",
+                              face = "bold"
+                              ),
+    legend.title = element_blank()
+  )
+
+plt_asia <- df_food |>
+  filter(Area == "Asia") |>
+  ggplot(aes(x = year_est, y = Value, group = Item)) +
+  geom_line(linewidth = 0.8, 
+            alpha = 0.7, col = "#808080") +
+  geom_point(aes(col = Item),
+             size = 2.2) +
+  scale_x_continuous(breaks = c(2006, 2013, 2020)) +
+  scale_y_continuous(limits = c(0, 80)) +
+  labs(x = NULL, y = NULL, title = "Asia") +
+  theme_minimal() +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_text(color = "#F1AF3AFF",
+                              face = "bold"
+                              ),
+    legend.title = element_blank()
+  )
+
+plt_oceania <- df_food |>
+  filter(Area == "Oceania") |>
+  ggplot(aes(x = year_est, y = Value, group = Item)) +
+  geom_line(linewidth = 0.8, 
+            alpha = 0.7, col = "#808080") +
+  geom_point(aes(col = Item),
+             size = 2.2) +
+  scale_x_continuous(breaks = c(2006, 2013, 2020)) +
+  scale_y_continuous(limits = c(0, 80)) +
+  labs(x = NULL, y = "%", title = "Oceania") +
+  theme_minimal() +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_text(color = "#208CC0FF",
+                              face = "bold"
+                              ),
+    legend.title = element_blank()
+  )
+
+plt_nam <- df_food |>
+  filter(Area == "Northern America") |>
+  ggplot(aes(x = year_est, y = Value, group = Item)) +
+  geom_line(linewidth = 0.8, 
+            alpha = 0.7, col = "#808080") +
+  geom_point(aes(col = Item),
+             size = 2.2) +
+  scale_x_continuous(breaks = c(2006, 2013, 2020)) +
+  scale_y_continuous(limits = c(0, 80)) +
+  labs(x = NULL, y = NULL, title = "North America") +
+  theme_minimal() +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_text(color = "#003967FF",
+                              face = "bold"
+                              ),
+    legend.title = element_blank()
+  )
+
+plt_sam <- df_food |>
+  filter(Area == "South America") |>
+  ggplot(aes(x = year_est, y = Value, group = Item)) +
+  geom_line(linewidth = 0.8, 
+            alpha = 0.7, col = "#808080") +
+  geom_point(aes(col = Item),
+             size = 2.2) +
+  scale_x_continuous(breaks = c(2006, 2013, 2020)) +
+  scale_y_continuous(limits = c(0, 80)) +
+  labs(x = NULL, y = NULL, title = "South America") +
+  theme_minimal() +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_text(color = "#CF5E4EFF",
+                              face = "bold"
+                              ),
+    legend.title = element_blank()
+  )
+```
+
+```{r make-plot, warning = FALSE}
+# combine plots
+plt_combined <- ggpubr::ggarrange(
+  plt_africa, plt_europe, plt_asia,
+  plt_oceania, plt_nam, plt_sam,
+  ncol = 3, nrow = 2,
+  common.legend = TRUE
+)
+
+plot_title <- "Trends in cereal-based diets & undernourishment"
+plot_subtitle <- "Continents with diets that have a higher percentage of energy coming from\ncereals, roots, and tubers seem to experience higher rates of undernourishment."
+
+title <- ggplot() +
+  labs(title = plot_title, subtitle = plot_subtitle) +
+  theme(
+    panel.background = element_rect(color = "white", fill = "white"),
+    plot.background = element_rect(color = "white", fill = "white"),
+    panel.border = element_rect(color = "white", fill = "white"),
+    plot.title = element_text(size = 18, face = "bold",
+                              margin = margin(0, 0, 5, 0)),
+    plot.subtitle = element_text(
+      margin = margin(0, 0, -10, 0)
+    )
+  )
+
+plt_final <- cowplot::plot_grid(title, plt_combined, ncol = 1,
+                   rel_heights = c(0.20, 1),
+                   panel_spacing = unit(0.5, "lines"))
+
+ggsave(filename = "worldfood.jpeg",
+       plot = plt_final,
+       width = 8,
+       height = 6,
+       bg = "white")
+```
+

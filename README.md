@@ -11,3 +11,4 @@ Past TidyTuesday datasets I've worked with:
 | Income Inequality | 2025-08-05 | [Income dataset](https://github.com/rfordatascience/tidytuesday/tree/main/data/2025/2025-08-05) | [R scripts](https://github.com/jkaminags/TidyTuesday/tree/main/2025/giniVisualizer) |
 | Extreme Weather Attribution | 2025-08-13 | [Attribution dataset](https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-08-12/readme.md) | [RMD file](https://github.com/jkaminags/TidyTuesday/blob/main/2025/attribution.Rmd) |
 | Crane Migration | 2025-09-30 | [Crane dataset](https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-09-30/readme.md) | [RMD file](https://github.com/jkaminags/TidyTuesday/blob/main/2025/cranes.Rmd) |
+| World Food | 2025-10-14 | [World Food dataset](https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-10-14/readme.md) | [RMD file](https://github.com/jkaminags/TidyTuesday/blob/main/2025/worldfood.Rmd) |
